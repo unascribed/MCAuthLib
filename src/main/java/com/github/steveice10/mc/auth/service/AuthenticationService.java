@@ -1,16 +1,11 @@
 package com.github.steveice10.mc.auth.service;
 
 import com.github.steveice10.mc.auth.data.GameProfile;
-import com.github.steveice10.mc.auth.exception.request.InvalidCredentialsException;
 import com.github.steveice10.mc.auth.exception.request.RequestException;
-import com.github.steveice10.mc.auth.util.HTTP;
-
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Service used for authenticating users.
@@ -21,8 +16,8 @@ public abstract class AuthenticationService extends Service {
     protected String username;
     protected String password;
     protected GameProfile selectedProfile;
-    protected List<GameProfile.Property> properties = new ArrayList<>();
-    protected List<GameProfile> profiles = new ArrayList<>();
+    protected List<GameProfile.Property> properties = new ArrayList<GameProfile.Property>();
+    protected List<GameProfile> profiles = new ArrayList<GameProfile>();
 
     public AuthenticationService(URI defaultURI) {
         super(defaultURI);

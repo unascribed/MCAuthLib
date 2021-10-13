@@ -13,7 +13,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.Signature;
@@ -35,19 +34,26 @@ public class GameProfile {
     private static final Gson GSON;
 
     static {
-        try(InputStream in = SessionService.class.getResourceAsStream("/yggdrasil_session_pubkey.der")) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-            byte[] buffer = new byte[4096];
-            int length = -1;
-            while((length = in.read(buffer)) != -1) {
-                out.write(buffer, 0, length);
+    	try {
+        	InputStream in = SessionService.class.getResourceAsStream("/yggdrasil_session_pubkey.der");
+            try {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+       
+                byte[] buffer = new byte[4096];
+                int length = -1;
+                while((length = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, length);
+                }
+       
+                out.close();
+       
+                SIGNATURE_KEY = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(out.toByteArray()));
+            } catch(Exception e) {
+                throw new ExceptionInInitializerError("Missing/invalid yggdrasil public key.");
+            } finally {
+            	in.close();
             }
-
-            out.close();
-
-            SIGNATURE_KEY = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(out.toByteArray()));
-        } catch(Exception e) {
+    	} catch(Exception e) {
             throw new ExceptionInInitializerError("Missing/invalid yggdrasil public key.");
         }
 
@@ -147,7 +153,7 @@ public class GameProfile {
      */
     public List<Property> getProperties() {
         if(this.properties == null) {
-            this.properties = new ArrayList<>();
+            this.properties = new ArrayList<Property>();
         }
 
         return Collections.unmodifiableList(this.properties);
@@ -160,7 +166,7 @@ public class GameProfile {
      */
     public void setProperties(List<Property> properties) {
         if(this.properties == null) {
-            this.properties = new ArrayList<>();
+            this.properties = new ArrayList<Property>();
         } else {
             this.properties.clear();
         }
@@ -223,7 +229,7 @@ public class GameProfile {
 
                 MinecraftTexturesPayload result;
                 try {
-                    String json = new String(Base64.decode(textures.getValue().getBytes(StandardCharsets.UTF_8)));
+                    String json = new String(Base64.decode(textures.getValue().getBytes("UTF-8")));
                     result = GSON.fromJson(json, MinecraftTexturesPayload.class);
                 } catch(Exception e) {
                     throw new ProfileTextureException("Could not decode texture payload.", e);
@@ -426,7 +432,7 @@ public class GameProfile {
          */
         public Texture(String url, Map<String, String> metadata) {
             this.url = url;
-            this.metadata = new HashMap<>(metadata);
+            this.metadata = new HashMap<String, String>(metadata);
         }
 
         /**

@@ -12,7 +12,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -97,7 +96,8 @@ public class MsaAuthenticationService extends AuthenticationService {
         try {
             HttpURLConnection connection = HTTP.createUrlConnection(this.getProxy(), MS_LOGIN_ENDPOINT);
             connection.setDoInput(true);
-            try (InputStream in = connection.getResponseCode() == 200 ? connection.getInputStream() : connection.getErrorStream()) {
+            InputStream in = connection.getResponseCode() == 200 ? connection.getInputStream() : connection.getErrorStream();
+            try {
                 cookie = connection.getHeaderField("set-cookie");
                 String body = inputStreamToString(in);
                 Matcher m = PPFT_PATTERN.matcher(body);
@@ -113,6 +113,8 @@ public class MsaAuthenticationService extends AuthenticationService {
                 } else {
                     throw new ServiceUnavailableException("Could not parse response of '" + MS_LOGIN_ENDPOINT + "'.");
                 }
+            } finally {
+            	in.close();
             }
         } catch (IOException e) {
             throw new ServiceUnavailableException("Could not make request to '" + MS_LOGIN_ENDPOINT + "'.", e);
@@ -122,7 +124,7 @@ public class MsaAuthenticationService extends AuthenticationService {
             throw new RequestException("Invalid response from '" + MS_LOGIN_ENDPOINT + "' missing one or more of cookie, PPFT or urlPost");
         }
 
-        Map<String, String> map = new HashMap<>();
+        Map<String, String> map = new HashMap<String, String>();
 
         map.put("login", this.username);
         map.put("loginfmt", this.username);
@@ -133,7 +135,7 @@ public class MsaAuthenticationService extends AuthenticationService {
         String code;
 
         try {
-            byte[] bytes = postData.getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = postData.getBytes("UTF-8");
 
             HttpURLConnection connection = HTTP.createUrlConnection(this.getProxy(), URI.create(urlPost));
             connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
@@ -143,8 +145,11 @@ public class MsaAuthenticationService extends AuthenticationService {
             connection.setDoInput(true);
             connection.setDoOutput(true);
 
-            try(OutputStream out = connection.getOutputStream()) {
+            OutputStream out = connection.getOutputStream();
+            try {
                 out.write(bytes);
+            } finally {
+            	out.close();
             }
 
             if (connection.getResponseCode() != 200 || connection.getURL().toString().equals(urlPost)) {
@@ -153,7 +158,7 @@ public class MsaAuthenticationService extends AuthenticationService {
                 throw new InvalidCredentialsException("Invalid username and/or password");
             }
 
-            Matcher m = CODE_PATTERN.matcher(URLDecoder.decode(connection.getURL().toString(), StandardCharsets.UTF_8.name()));
+            Matcher m = CODE_PATTERN.matcher(URLDecoder.decode(connection.getURL().toString(), "UTF-8"));
             if (m.find()) {
                 code = m.group(1);
             } else {
@@ -171,11 +176,14 @@ public class MsaAuthenticationService extends AuthenticationService {
 
     private String inputStreamToString(InputStream inputStream) throws IOException {
         StringBuilder textBuilder = new StringBuilder();
-        try (Reader reader = new BufferedReader(new InputStreamReader(inputStream, Charset.forName(StandardCharsets.UTF_8.name())))) {
+        Reader reader = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
+        try {
             int c = 0;
             while ((c = reader.read()) != -1) {
                 textBuilder.append((char) c);
             }
+        } finally {
+        	reader.close();
         }
 
         return textBuilder.toString();
@@ -217,7 +225,7 @@ public class MsaAuthenticationService extends AuthenticationService {
      * @throws RequestException
      */
     private void getProfile() throws RequestException {
-        Map<String, String> headers = new HashMap<>();
+        Map<String, String> headers = new HashMap<String, String>();
         headers.put("Authorization", "Bearer " + this.accessToken);
 
         McProfileResponse response = HTTP.makeRequest(this.getProxy(), MC_PROFILE_ENDPOINT, null, McProfileResponse.class, headers);
@@ -299,7 +307,7 @@ public class MsaAuthenticationService extends AuthenticationService {
         }
 
         public Map<String, String> toMap() {
-            Map<String, String> map = new HashMap<>();
+            Map<String, String> map = new HashMap<String, String>();
 
             map.put("client_id", client_id);
             map.put("scope", scope);
@@ -320,7 +328,7 @@ public class MsaAuthenticationService extends AuthenticationService {
         }
 
         public Map<String, String> toMap() {
-            Map<String, String> map = new HashMap<>();
+            Map<String, String> map = new HashMap<String, String>();
 
             map.put("grant_type", grant_type);
             map.put("client_id", client_id);
@@ -346,7 +354,7 @@ public class MsaAuthenticationService extends AuthenticationService {
         }
 
         public Map<String, String> toMap() {
-            Map<String, String> map = new HashMap<>();
+            Map<String, String> map = new HashMap<String, String>();
 
             map.put("client_id", client_id);
             map.put("code", code);

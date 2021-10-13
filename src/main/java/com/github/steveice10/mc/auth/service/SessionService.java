@@ -9,9 +9,10 @@ import com.github.steveice10.mc.auth.util.HTTP;
 import com.github.steveice10.mc.auth.util.UUIDSerializer;
 
 import javax.crypto.SecretKey;
+
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -49,13 +50,15 @@ public class SessionService extends Service {
     public String getServerId(String base, PublicKey publicKey, SecretKey secretKey) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-1");
-            digest.update(base.getBytes(StandardCharsets.ISO_8859_1));
+            digest.update(base.getBytes("ISO-8859-1"));
             digest.update(secretKey.getEncoded());
             digest.update(publicKey.getEncoded());
             return new BigInteger(digest.digest()).toString(16);
         } catch(NoSuchAlgorithmException e) {
             throw new IllegalStateException("Server ID hash algorithm unavailable.", e);
-        }
+        } catch (UnsupportedEncodingException e) {
+        	throw new IllegalStateException("Server ID hash algorithm unavailable.", e);
+		}
     }
 
     /**
@@ -80,7 +83,7 @@ public class SessionService extends Service {
      * @throws RequestException If an error occurs while making the request.
      */
     public GameProfile getProfileByServer(String name, String serverId) throws RequestException {
-        Map<String, String> queryParams = new HashMap<>();
+        Map<String, String> queryParams = new HashMap<String, String>();
         queryParams.put("username", name);
         queryParams.put("serverId", serverId);
 

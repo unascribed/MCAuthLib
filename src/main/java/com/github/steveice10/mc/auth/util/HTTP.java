@@ -5,14 +5,11 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import jdk.nashorn.internal.objects.NativeArray;
-
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -132,9 +129,9 @@ public class HTTP {
             }
 
             try {
-                inputString.append(URLEncoder.encode(inputField.getKey(), StandardCharsets.UTF_8.toString()));
+                inputString.append(URLEncoder.encode(inputField.getKey(), "UTF-8"));
                 inputString.append("=");
-                inputString.append(URLEncoder.encode(inputField.getValue(), StandardCharsets.UTF_8.toString()));
+                inputString.append(URLEncoder.encode(inputField.getValue(), "UTF-8"));
             } catch (UnsupportedEncodingException ignored) { }
         }
 
@@ -177,7 +174,7 @@ public class HTTP {
     }
 
     private static JsonElement performPostRequest(Proxy proxy, URI uri, Map<String, String> extraHeaders, String post, String type) throws IOException {
-        byte[] bytes = post.getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = post.getBytes("UTF-8");
 
         HttpURLConnection connection = createUrlConnection(proxy, uri);
         connection.setRequestProperty("Content-Type", type + "; charset=utf-8");
@@ -188,8 +185,11 @@ public class HTTP {
         connection.setDoInput(true);
         connection.setDoOutput(true);
 
-        try(OutputStream out = connection.getOutputStream()) {
+        OutputStream out = connection.getOutputStream();
+        try {
             out.write(bytes);
+        } finally {
+        	out.close();
         }
 
         return processResponse(connection);
@@ -204,8 +204,11 @@ public class HTTP {
     }
 
     private static JsonElement processResponse(HttpURLConnection connection) throws IOException {
-        try(InputStream in = connection.getResponseCode() == 200 ? connection.getInputStream() : connection.getErrorStream()) {
+    	InputStream in = connection.getResponseCode() == 200 ? connection.getInputStream() : connection.getErrorStream();
+        try {
             return in != null ? GSON.fromJson(new InputStreamReader(in), JsonElement.class) : null;
+        } finally {
+        	in.close();
         }
     }
 }
